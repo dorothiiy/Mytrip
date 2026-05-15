@@ -1,7 +1,0 @@
-{
-  "name": "trip-render-entry",
-  "private": true,
-  "scripts": {
-    "start": "node index.js"
-  }
-}

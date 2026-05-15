@@ -31,10 +31,36 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5001;
+const HOST = '0.0.0.0';
+
+function validateEnv() {
+  const required = ['MONGODB_URI', 'JWT_SECRET'];
+  const missing = required.filter((key) => !process.env[key]?.trim());
+  if (missing.length) {
+    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+    console.error('Set them in the Render dashboard under Environment.');
+    process.exit(1);
+  }
+
+  const uri = process.env.MONGODB_URI;
+  if (process.env.RENDER && /localhost|127\.0\.0\.1/.test(uri)) {
+    console.error('MONGODB_URI points to localhost, which does not work on Render.');
+    console.error('Create a free MongoDB Atlas cluster and set MONGODB_URI to your Atlas connection string.');
+    process.exit(1);
+  }
+}
+
+validateEnv();
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('MongoDB connected');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(PORT, HOST, () => console.log(`Server running on http://${HOST}:${PORT}`));
   })
-  .catch(err => console.error('DB Error:', err));
+  .catch((err) => {
+    console.error('DB Error:', err.message);
+    if (process.env.RENDER) {
+      console.error('Check MONGODB_URI in Render Environment (use MongoDB Atlas, not 127.0.0.1).');
+    }
+    process.exit(1);
+  });

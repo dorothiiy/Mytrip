@@ -2,10 +2,12 @@ services:
   - type: web
     name: trip
     runtime: node
-    # Leave rootDir unset so commands run from repo root (not "src").
-    buildCommand: sh scripts/render-build.sh
+    # Repo root — do not set Root Directory to "src" in the dashboard.
+    buildCommand: npm ci
     startCommand: npm start
     envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
       - key: NODE_VERSION
         value: "20"
       - key: MONGODB_URI

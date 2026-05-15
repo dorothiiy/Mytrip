@@ -1,3 +1,2 @@
-// Render may use Root Directory "src" and start command "node index.js".
-// Delegate to the real app entry point at repo root.
+// Fallback when start command is "node index.js" from a src/ working directory.
 require('../server/index.js');

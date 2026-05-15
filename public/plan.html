@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Your Itinerary - AI Travel Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    .map-container { height: 100vh; position: sticky; top: 0; }
+    .custom-div-icon { background: transparent; border: none; }
+  </style>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] }, colors: { brand: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 900: '#134e4a' } } } } }
+  </script>
+</head>
+<body class="bg-slate-50 font-sans antialiased text-slate-900 min-h-screen">
+  <div id="navbar"></div>
+  
+  <div id="tripLoading" class="flex flex-col items-center justify-center min-h-[60vh]">
+    <div class="w-16 h-16 border-4 border-slate-200 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+    <p class="text-slate-500 font-medium">Loading your spectacular itinerary...</p>
+  </div>
+  
+  <div id="errorMsg" class="hidden max-w-2xl mx-auto mt-12 bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 text-center font-medium"></div>
+
+  <div id="mainGrid" class="hidden flex flex-col lg:flex-row">
+    <!-- Left Scrollable Area -->
+    <div class="w-full lg:w-1/2 p-4 sm:p-8 xl:p-12 order-2 lg:order-1 border-r border-slate-200">
+      
+      <!-- Trip Header -->
+      <div id="tripHeader" class="mb-10">
+        <div class="flex items-center gap-3 text-sm font-semibold text-brand-600 mb-2 uppercase tracking-wide">
+          <span id="tripOrigin">Origin</span> 
+          <span>→</span>
+          <span id="tripDest" class="text-slate-900">Destination</span>
+        </div>
+        <h1 class="text-4xl font-extrabold text-slate-900 mb-4" id="tripTitle">Your Trip</h1>
+        
+        <div class="flex flex-wrap gap-2 mb-6">
+          <span class="px-3 py-1 bg-brand-50 text-brand-700 rounded-lg text-sm font-bold flex items-center" id="tripDays">📅 1 Days</span>
+          <span class="px-3 py-1 bg-brand-50 text-brand-700 rounded-lg text-sm font-bold flex items-center" id="tripBudget">💰 Moderate</span>
+          <span class="px-3 py-1 bg-brand-50 text-brand-700 rounded-lg text-sm font-bold flex items-center" id="tripType">🚀 Flight</span>
+        </div>
+
+        <div id="tripInterests" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Route Stats -->
+      <div id="routeStats" class="hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-10 flex justify-around text-center">
+        <div>
+          <div class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Total Distance</div>
+          <div class="text-xl font-extrabold text-slate-800" id="routeDist">-</div>
+        </div>
+        <div class="w-px bg-slate-200"></div>
+        <div>
+          <div class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Est. Travel Time</div>
+          <div class="text-xl font-extrabold text-slate-800" id="routeTime">-</div>
+        </div>
+      </div>
+
+       <!-- Budget Estimate -->
+      <div id="budgetEstimate" class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mb-10">
+        <h3 class="font-bold text-lg text-slate-900 mb-4 flex items-center">
+          <span class="mr-2 text-xl">💳</span> Estimated Budget
+        </h3>
+        <div class="space-y-3">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Travel / Fuel</span>
+            <span class="font-semibold text-slate-800" id="costTravel">-</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Accommodation (<span id="budNights"></span> nights)</span>
+            <span class="font-semibold text-slate-800" id="costHotel">-</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Food & Dining</span>
+            <span class="font-semibold text-slate-800" id="costFood">-</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Activities & Tickets</span>
+            <span class="font-semibold text-slate-800" id="costActivities">-</span>
+          </div>
+          <div class="pt-3 border-t border-slate-100 flex justify-between">
+            <span class="font-bold text-slate-900">Total Est.</span>
+            <span class="font-extrabold text-brand-600" id="costTotal">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flight Details -->
+      <div id="flightSuggestionCard" class="hidden bg-white border border-slate-100 rounded-3xl p-6 mb-10 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-slate-900 flex items-center"><span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg mr-2">✈️</span> Flight Suggestion</h3>
+          <span class="text-sm font-bold text-slate-900" id="flightPrice"></span>
+        </div>
+        <div class="bg-slate-50 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400 font-semibold mb-1" id="flightAirline"></p>
+            <div class="font-bold text-xl text-slate-900" id="flightDep"></div>
+          </div>
+          <div class="flex-1 px-4 flex flex-col items-center">
+            <p class="text-xs text-slate-400 font-medium mb-1" id="flightDur"></p>
+            <div class="w-full h-px bg-slate-300 relative">
+              <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-slate-300">✈️</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-400 font-semibold mb-1" id="flightNumber"></p>
+            <div class="font-bold text-xl text-slate-900" id="flightArr"></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="text-2xl font-extrabold text-slate-900 mb-6">Daily Itinerary</h2>
+      <div id="itineraryContent" class="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-brand-200 before:to-brand-50">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+    
+    <!-- Right Map Area -->
+    <div class="w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen relative order-1 lg:order-2 top-0 sticky">
+      <div id="map" class="map-container z-10 w-full h-full"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js?v=2"></script>
+  <script src="js/auth.js?v=2"></script>
+  <script src="js/components.js?v=2"></script>
+  <script>
+    let map, markerGroup, routeLayer, allHotels = [], tripData = null;
+
+    function initMap() {
+      map = L.map('map').setView([0, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      markerGroup = L.featureGroup().addTo(map);
+
+      if (tripData) {
+        calculateAndDisplayRoute(tripData);
+      }
+    }
+
+    async function geocodePhoton(query) {
+      try {
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`);
+        const data = await res.json();
+        if(data.features && data.features.length > 0) {
+          const coords = data.features[0].geometry.coordinates; // [lon, lat]
+          return { lat: coords[1], lng: coords[0] };
+        }
+      } catch(e) { console.error('Geocode err', e) }
+      return null;
+    }
+
+    async function calculateAndDisplayRoute(trip) {
+      if (!map) return;
+      markerGroup.clearLayers();
+      if (routeLayer) map.removeLayer(routeLayer);
+
+      let allLocations = [];
+      trip.generatedPlan.forEach(day => {
+        if (day.locations) allLocations.push(...day.locations);
+        if (day.travelDestinations) allLocations.push(...day.travelDestinations);
+        if (day.finalDestinations) allLocations.push(...day.finalDestinations);
+      });
+
+      if (allLocations.length === 0) return;
+
+      let queryLocations = allLocations.map(loc => {
+        return loc.toLowerCase().includes(trip.destination.toLowerCase()) ? loc : `${loc}, ${trip.destination}`;
+      });
+      
+      if (queryLocations.length > 8) queryLocations = queryLocations.slice(0, 8);
+
+      const waypointsCoords = [];
+      for (const loc of queryLocations) {
+         const coords = await geocodePhoton(loc);
+         if (coords) {
+            waypointsCoords.push(coords);
+            L.marker([coords.lat, coords.lng]).bindPopup(`<b>${loc}</b>`).addTo(markerGroup);
+         }
+      }
+
+      if (waypointsCoords.length > 0) {
+        map.fitBounds(markerGroup.getBounds(), { padding: [50, 50] });
+      }
+
+      if (waypointsCoords.length >= 2) {
+          let profile = 'driving';
+          if (trip.travelType === 'Bike') profile = 'cycling';
+          
+          const coordsString = waypointsCoords.map(c => `${c.lng},${c.lat}`).join(';');
+          
+          try {
+            const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${coordsString}?overview=full&geometries=geojson`);
+            const osrmData = await osrmRes.json();
+            
+            if (osrmData.code === 'Ok' && osrmData.routes.length > 0) {
+                const route = osrmData.routes[0];
+                
+                routeLayer = L.geoJSON(route.geometry, {
+                  style: { color: '#14b8a6', weight: 4, opacity: 0.8 }
+                }).addTo(map);
+
+                const totalDistance = route.distance;
+                const totalTime = route.duration;
+                
+                document.getElementById('routeStats').classList.remove('hidden');
+                document.getElementById('routeDist').textContent = (totalDistance / 1000).toFixed(1) + ' km';
+                
+                const hours = Math.floor(totalTime / 3600);
+                const minutes = Math.floor((totalTime % 3600) / 60);
+                document.getElementById('routeTime').textContent = hours > 0 ? `${hours} hr ${minutes} min` : `${minutes} min`;
+                
+                calculateBudget(trip, totalDistance);
+            } else {
+               calculateBudget(trip, 0);
+            }
+          } catch(err) {
+            calculateBudget(trip, 0);
+          }
+      } else {
+         calculateBudget(trip, 0);
+      }
+    }
+
+    function calculateBudget(trip, distanceMeters) {
+      if (!trip) return;
+      
+      const days = trip.days;
+      let multiplier = 1;
+      if (trip.budget === 'Moderate') multiplier = 2.0;
+      if (trip.budget === 'Luxury') multiplier = 4.0;
+
+      let travelCost = 0;
+      const km = distanceMeters / 1000;
+      if (km > 0) {
+        if (trip.travelType === 'Car') travelCost = km * 8;
+        else if (trip.travelType === 'Flight') travelCost = trip.flightDetails ? trip.flightDetails.price : km * 6 + 2500;
+        else travelCost = km * 3;
+      } else {
+         travelCost = days * 1000 * multiplier;
+      }
+
+      const nights = Math.max(days - 1, 1);
+      const baseHotel = trip.budget === 'Budget' ? 1500 : trip.budget === 'Moderate' ? 4000 : 10000;
+      const hotelCost = nights * baseHotel;
+      document.getElementById('budNights').textContent = nights;
+
+      const dailyFood = trip.budget === 'Budget' ? 800 : trip.budget === 'Moderate' ? 2000 : 5000;
+      const foodCost = days * dailyFood;
+
+      const dailyActivity = trip.budget === 'Budget' ? 500 : trip.budget === 'Moderate' ? 1500 : 4000;
+      const activitiesCost = days * dailyActivity;
+
+      const total = travelCost + hotelCost + foodCost + activitiesCost;
+
+      document.getElementById('costTravel').textContent = `₹${Math.round(travelCost)}`;
+      document.getElementById('costHotel').textContent = `₹${Math.round(hotelCost)}`;
+      document.getElementById('costFood').textContent = `₹${Math.round(foodCost)}`;
+      document.getElementById('costActivities').textContent = `₹${Math.round(activitiesCost)}`;
+      document.getElementById('costTotal').textContent = `₹${Math.round(total)}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initMap();
+      const user = Auth.getUser();
+      document.getElementById('navbar').innerHTML = Components.renderNavbar();
+      Components.initNavbar(user);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const tripId = urlParams.get('id');
+
+      if (!tripId) {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      try {
+        const trip = await fetchAPI(`/trips/${tripId}`);
+        tripData = trip;
+
+        document.getElementById('tripOrigin').textContent = trip.origin || 'Origin';
+        document.getElementById('tripDest').textContent = trip.destination;
+        document.getElementById('tripTitle').textContent = `${trip.days} Days in ${trip.destination}`;
+        document.getElementById('tripDays').innerHTML = `📅 ${trip.days} Days`;
+        document.getElementById('tripBudget').innerHTML = `💰 ${trip.budget}`;
+        document.getElementById('tripType').innerHTML = `🚀 ${trip.travelType}`;
+
+        document.getElementById('tripInterests').innerHTML = trip.interests.map(i => 
+          `<span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium capitalize border border-slate-200">${i}</span>`
+        ).join('');
+
+        const itineraryContent = document.getElementById('itineraryContent');
+        itineraryContent.innerHTML = trip.generatedPlan.map(day => {
+          let specificContent = '';
+          if (day.type === 'standard') {
+            specificContent = `
+              <div class="mb-3">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Places Highlights</span>
+                <div class="flex flex-wrap gap-2">${day.locations ? day.locations.map(l => `<span class="bg-brand-50 text-brand-600 px-2 py-1 rounded-md text-sm font-medium">📍 ${l}</span>`).join('') : ''}</div>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Food & Dining</span>
+                <div class="flex flex-wrap gap-2">${day.foodPlaces ? day.foodPlaces.map(f => `<span class="bg-amber-50 text-amber-600 px-2 py-1 rounded-md text-sm font-medium">🍔 ${f}</span>`).join('') : ''}</div>
+              </div>
+            `;
+          }
+
+          return `
+          <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+            <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-brand-500 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-lg z-10">
+              ${day.day}
+            </div>
+            <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-4 transition hover:shadow-md">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="font-bold text-slate-900 text-lg">${day.title}</h3>
+                <span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-lg font-bold">${day.type.toUpperCase()}</span>
+              </div>
+              <ul class="list-disc list-inside text-sm text-slate-600 mb-4 space-y-1">
+                ${day.activities.map(act => `<li>${act}</li>`).join('')}
+              </ul>
+              ${specificContent}
+            </div>
+          </div>
+          `;
+        }).join('');
+
+        if (trip.travelType === 'Flight' && trip.flightDetails) {
+            document.getElementById('flightSuggestionCard').classList.remove('hidden');
+            document.getElementById('flightAirline').textContent = trip.flightDetails.airline;
+            document.getElementById('flightNumber').textContent = trip.flightDetails.flightNumber;
+            document.getElementById('flightDep').textContent = trip.flightDetails.departureTime;
+            document.getElementById('flightArr').textContent = trip.flightDetails.arrivalTime;
+            document.getElementById('flightDur').textContent = trip.flightDetails.duration;
+            document.getElementById('flightPrice').textContent = `₹${trip.flightDetails.price}`;
+        }
+
+        document.getElementById('tripLoading').classList.add('hidden');
+        document.getElementById('mainGrid').classList.remove('hidden');
+        
+        if (map) {
+          calculateAndDisplayRoute(trip);
+        }
+      } catch (err) {
+        document.getElementById('tripLoading').classList.add('hidden');
+        document.getElementById('errorMsg').textContent = 'Could not load itinerary. ' + err.message;
+        document.getElementById('errorMsg').classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

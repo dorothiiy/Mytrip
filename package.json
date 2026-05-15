@@ -2,7 +2,7 @@
   "name": "trip",
   "version": "1.0.0",
   "description": "AI Travel Roadmap Planner",
-  "main": "index.js",
+  "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",

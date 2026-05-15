@@ -2,6 +2,7 @@ services:
   - type: web
     name: trip
     runtime: node
+    # Leave rootDir unset so commands run from repo root (not "src").
     buildCommand: npm ci
     startCommand: npm start
     envVars:

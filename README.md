@@ -1,4 +1,6 @@
-# 🌍 AI Travel Roadmap Planner
+# 🌍 Mytrip - AI Travel Roadmap Planner
+
+AI-powered travel planning web app that generates personalized itineraries using real-time maps, weather, route optimization, hotel suggestions, and intelligent recommendation systems.
 
 Welcome to the AI Travel Roadmap Planner! This is a modern, full-stack web application designed to help users automatically generate beautiful, optimized travel itineraries using Google Gemini AI and OpenStreetMap.
 
@@ -86,4 +88,4 @@ From there, you can sign up for an account, log in, and start planning your next
 - **Frontend:** HTML5, TailwindCSS, Vanilla JavaScript, Leaflet.js
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB / Mongoose
-- **APIs:** Google Gemini AI, Komoot Photon, OSRM, Overpass API 
+- **APIs:** Google Gemini AI, Komoot Photon, OSRM, Overpass API
